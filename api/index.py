@@ -1,42 +1,65 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-import json
+import json, math
 from pathlib import Path
-import statistics
 
 app = FastAPI()
 
-# Enable CORS for any origin
+# Allow POST from anywhere (CORS)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # allow all origins
-    allow_credentials=True,
-    allow_methods=["*"],  # allow all HTTP methods
-    allow_headers=["*"],  # allow all headers
+    allow_origins=["*"],
+    allow_methods=["POST"],
+    allow_headers=["*"],
 )
 
 # Load telemetry data
-telemetry_file = Path(__file__).parent / "telemetry.json"
-with open(telemetry_file, "r") as f:
+DATA_PATH = Path(__file__).parent / "telemetry.json"
+with open(DATA_PATH, "r", encoding="utf-8") as f:
     telemetry = json.load(f)
 
-@app.post("/analytics")
-def analytics(data: dict):
-    regions = data.get("regions", [])
-    threshold_ms = data.get("threshold_ms", 180)
-    
+def percentile(values, p):
+    if not values:
+        return None
+    values = sorted(values)
+    k = (len(values) - 1) * (p / 100)
+    f = math.floor(k)
+    c = math.ceil(k)
+    if f == c:
+        return values[int(k)]
+    return values[f] * (c - k) + values[c] * (k - f)
+
+@app.post("/api/latency")
+async def latency_endpoint(request: Request):
+    body = await request.json()
+    regions = body.get("regions", [])
+    threshold = body.get("threshold_ms", 180)
+
     result = {}
     for region in regions:
-        region_data = [r for r in telemetry if r["region"] == region]
+        region_data = [r for r in telemetry if r.get("region") == region]
+        latencies = [r["latency_ms"] for r in region_data if "latency_ms" in r]
+        uptimes = [r["uptime"] for r in region_data if "uptime" in r]
+
         if not region_data:
+            result[region] = {
+                "avg_latency": None,
+                "p95_latency": None,
+                "avg_uptime": None,
+                "breaches": 0
+            }
             continue
-        latencies = [r["latency_ms"] for r in region_data]
-        uptimes = [r["uptime_pct"] for r in region_data]
-        breaches = sum(1 for l in latencies if l > threshold_ms)
+
+        avg_latency = sum(latencies) / len(latencies)
+        p95_latency = percentile(latencies, 95)
+        avg_uptime = sum(uptimes) / len(uptimes) if uptimes else None
+        breaches = sum(1 for x in latencies if x > threshold)
+
         result[region] = {
-            "avg_latency": statistics.mean(latencies),
-            "p95_latency": statistics.quantiles(latencies, n=100)[94],  # 95th percentile
-            "avg_uptime": statistics.mean(uptimes),
+            "avg_latency": round(avg_latency, 3),
+            "p95_latency": round(p95_latency, 3),
+            "avg_uptime": round(avg_uptime, 3) if avg_uptime else None,
             "breaches": breaches
         }
+
     return result
