@@ -30,7 +30,7 @@ def percentile(values, p):
     return values[f] * (c - k) + values[c] * (k - f)
 
 # POST endpoint (for dashboards)
-@app.post("/")
+@app.post("/api/latency")
 async def latency_post(request: Request):
     body = await request.json()
     regions = body.get("regions", [])
@@ -66,6 +66,6 @@ async def latency_post(request: Request):
     return result
 
 # GET endpoint (for browser)
-@app.get("/")
+@app.get("/api/latency")
 def latency_get():
     return {"message": "Latency API is live. Use POST / with JSON body to get metrics."}
