@@ -1,49 +1,42 @@
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-import json
-import numpy as np
+import pandas as pd
 from pathlib import Path
 
 app = FastAPI()
 
-# Enable CORS for POST requests from any origin
+# Enable CORS for any origin
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["POST"],
-    allow_headers=["*"],
+    allow_origins=["*"],  # allow all origins
+    allow_credentials=True,
+    allow_methods=["*"],  # allow all HTTP methods
+    allow_headers=["*"],  # allow all headers
 )
 
-# Load telemetry.json once at startup
-TELEMETRY_FILE = Path(__file__).parent / "telemetry.json"
-with open(TELEMETRY_FILE, "r") as f:
-    telemetry_data = json.load(f)
+# Load telemetry
+telemetry_file = Path(__file__).parent / "telemetry.json"
+telemetry_df = pd.read_json(telemetry_file)
 
 @app.post("/analytics")
-async def analytics(request: Request):
-    data = await request.json()
-    regions = data.get("regions", [])
-    threshold = data.get("threshold_ms", 180)
+def analytics(payload: dict):
+    regions = payload.get("regions", [])
+    threshold = payload.get("threshold_ms", 180)
 
-    response = {}
+    result = {}
     for region in regions:
-        region_records = [r for r in telemetry_data if r["region"] == region]
-        if not region_records:
+        df_region = telemetry_df[telemetry_df["region"] == region]
+        if df_region.empty:
             continue
+        avg_latency = df_region["latency_ms"].mean()
+        p95_latency = df_region["latency_ms"].quantile(0.95)
+        avg_uptime = df_region["uptime_pct"].mean()
+        breaches = (df_region["latency_ms"] > threshold).sum()
 
-        latencies = np.array([r["latency_ms"] for r in region_records])
-        uptimes = np.array([r["uptime_pct"] for r in region_records])
-
-        avg_latency = float(np.mean(latencies))
-        p95_latency = float(np.percentile(latencies, 95))
-        avg_uptime = float(np.mean(uptimes))
-        breaches = int(np.sum(latencies > threshold))
-
-        response[region] = {
+        result[region] = {
             "avg_latency": avg_latency,
             "p95_latency": p95_latency,
             "avg_uptime": avg_uptime,
-            "breaches": breaches
+            "breaches": int(breaches),
         }
-
-    return response
+    return result

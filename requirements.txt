@@ -1,4 +1,3 @@
-fastapi>=0.118
+fastapi
 uvicorn
-numpy
 pandas
