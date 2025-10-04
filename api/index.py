@@ -31,7 +31,7 @@ def percentile(values, p):
         return values[int(k)]
     return values[f] * (c - k) + values[c] * (k - f)
 
-@app.post("/api/latency")
+@app.post("/")
 async def latency_endpoint(request: Request):
     body = await request.json()
     regions = body.get("regions", [])
