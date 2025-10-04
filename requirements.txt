@@ -1,5 +1,4 @@
-fastapi
+fastapi>=0.118
 uvicorn
-pandas
 numpy
-fastapi.middleware.cors
+pandas
