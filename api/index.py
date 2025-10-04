@@ -9,7 +9,7 @@ app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_methods=["POST", "OPTIONS"],  # allow POST and preflight OPTIONS
+    allow_methods=["POST"],  # allow POST and preflight OPTIONS
     allow_headers=["*"],
 )
 
@@ -29,7 +29,7 @@ def percentile(values, p):
         return values[int(k)]
     return values[f] * (c - k) + values[c] * (k - f)
 
-@app.post("/api/latency")
+@app.post("/")
 async def latency_endpoint(request: Request):
     body = await request.json()
     regions = body.get("regions", [])
