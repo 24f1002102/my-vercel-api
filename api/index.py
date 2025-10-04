@@ -5,15 +5,15 @@ from pathlib import Path
 
 app = FastAPI()
 
-# Allow POST from anywhere (CORS)
+# CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_methods=["POST", "OPTIONS"],  # allow POST and preflight OPTIONS
+    allow_methods=["POST", "OPTIONS", "GET"],  # include GET for browser
     allow_headers=["*"],
 )
 
-# Load telemetry data
+# Load telemetry
 DATA_PATH = Path(__file__).parent / "telemetry.json"
 with open(DATA_PATH, "r", encoding="utf-8") as f:
     telemetry = json.load(f)
@@ -29,8 +29,9 @@ def percentile(values, p):
         return values[int(k)]
     return values[f] * (c - k) + values[c] * (k - f)
 
+# POST endpoint (for dashboards)
 @app.post("/")
-async def latency_endpoint(request: Request):
+async def latency_post(request: Request):
     body = await request.json()
     regions = body.get("regions", [])
     threshold = body.get("threshold_ms", 180)
@@ -39,7 +40,7 @@ async def latency_endpoint(request: Request):
     for region in regions:
         region_data = [r for r in telemetry if r.get("region") == region]
         latencies = [r["latency_ms"] for r in region_data if "latency_ms" in r]
-        uptimes = [r["uptime"] for r in region_data if "uptime" in r]
+        uptimes = [r["uptime_pct"] for r in region_data if "uptime_pct" in r]
 
         if not region_data:
             result[region] = {
@@ -63,3 +64,8 @@ async def latency_endpoint(request: Request):
         }
 
     return result
+
+# GET endpoint (for browser)
+@app.get("/")
+def latency_get():
+    return {"message": "Latency API is live. Use POST / with JSON body to get metrics."}
