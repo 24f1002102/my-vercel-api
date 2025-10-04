@@ -19,14 +19,6 @@ TELEMETRY_FILE = Path(__file__).parent / "telemetry.json"
 with open(TELEMETRY_FILE, "r") as f:
     telemetry_data = json.load(f)
 
-# Expected format: list of dicts with keys: region, latency_ms, uptime
-# Example:
-# [
-#   {"region": "apac", "latency_ms": 150, "uptime": 99.9},
-#   {"region": "emea", "latency_ms": 200, "uptime": 100},
-#   ...
-# ]
-
 @app.post("/analytics")
 async def analytics(request: Request):
     data = await request.json()
@@ -40,7 +32,7 @@ async def analytics(request: Request):
             continue
 
         latencies = np.array([r["latency_ms"] for r in region_records])
-        uptimes = np.array([r["uptime"] for r in region_records])
+        uptimes = np.array([r["uptime_pct"] for r in region_records])
 
         avg_latency = float(np.mean(latencies))
         p95_latency = float(np.percentile(latencies, 95))
