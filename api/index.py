@@ -9,7 +9,7 @@ app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_methods=["POST"],  # allow POST and preflight OPTIONS
+    allow_methods=["POST", "OPTIONS"],  # allow POST and preflight OPTIONS
     allow_headers=["*"],
 )
 
