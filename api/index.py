@@ -2,6 +2,8 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 import json, math
 from pathlib import Path
+import uvicorn
+
 
 app = FastAPI()
 
@@ -69,3 +71,7 @@ async def latency_post(request: Request):
 @app.get("/api/latency")
 def latency_get():
     return {"message": "Latency API is live. Use POST / with JSON body to get metrics."}
+
+
+if __name__ == "__main__":
+    uvicorn.run(app, host="0.0.0.0", port=8000)
