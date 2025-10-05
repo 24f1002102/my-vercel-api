@@ -13,6 +13,7 @@ app.add_middleware(
     allow_origins=["*"],
     allow_methods=["POST", "OPTIONS", "GET"],  # include GET for browser
     allow_headers=["*"],
+    expose_headers=["*"]
 )
 
 # Load telemetry
