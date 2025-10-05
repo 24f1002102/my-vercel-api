@@ -66,7 +66,7 @@ async def latency_post(request: Request):
             "breaches": breaches
         }
 
-    return {"regions":[result]}
+    return {"regions":result}
 
 # GET endpoint (for browser)
 @app.get("/api/latency")
